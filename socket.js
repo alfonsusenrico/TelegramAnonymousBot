@@ -1,6 +1,6 @@
 //socket initialization
 let server = require('http').createServer()
-server.listen(7777,'ba3bd590df2c.ngrok.io');
+server.listen(7777,'a82094eae8a0.ngrok.io');
 let io = require('socket.io')(server)
 
 //class room
@@ -83,12 +83,17 @@ io.on('connection', (socket) => {
     async function addId(data) {
         var exist = false
         for(i = 0;i < arrObject.length; i++) {
-            if(arrObject[i].getMatch() == false) {
-                if(String(data.location).toLowerCase() == String(arrObject[i].getLocation().toLowerCase())) {
-                    arrObject[i].addUser(data.id)
-                    await checkMatch()
-                    exist = true
-                    return i
+            if(arrObject[i].user1 != data.id) {
+                if(arrObject[i].getMatch() == false) {
+                    if(String(data.location).toLowerCase() == String(arrObject[i].getLocation().toLowerCase())) {
+                        arrObject[i].addUser(data.id)
+                        await checkMatch(data.id)
+                        exist = true
+                        return i
+                    }
+                }
+                else {
+                    return pushId(data)
                 }
             }
             else {
@@ -107,9 +112,18 @@ io.on('connection', (socket) => {
             return addId(data)
         }
     }
-    async function checkMatch() {
-        if(arrObject[socket.room].getMatch()) {
-            io.sockets.in(socket.room).emit('matched', {user1: arrObject[socket.room].user1, user2: arrObject[socket.room].user2, msg: 'Sudah nemu nih...'})
+    async function getRoomNum(id) {
+        for(i = 0; i < arrObject.length; i++) {
+            if(arrObject[i].user1 == id || arrObject[i].user2 == id) {
+                return arrObject[i].roomNum
+            }
+        }
+    }
+    async function checkMatch(id) {
+        const room = await getRoomNum(id)
+        if(arrObject[room].getMatch()) {
+            console.log('matched')
+            io.emit('matched', {user1: arrObject[room].user1, user2: arrObject[room].user2, msg: 'Sudah nemu nih...'})
             //clearInterval()
         }
     }
@@ -207,7 +221,7 @@ io.on('connection', (socket) => {
                 users[i].state = 'default'
                 for(i = 0; i < arrObject.length; i++) {
                     if(arrObject[i].user1 == data.id) {
-                        arrObject[i].location = data.location
+                        arrObject[i].destroyRoom()
                         break
                     }
                 }
@@ -270,53 +284,57 @@ io.on('connection', (socket) => {
     })
     socket.on('getRoom', async (data) => {
         const room = await getRoom(data)
-        socket.room = room
-        socket.join(socket.room)
-        socket.username = data.id
-        var dat = {
-            'id' : data.id,
-            'room' : socket.room
-        }
-        io.emit('testing', dat)
+        //socket.join(room)
         //searching = true
         //interval(data)
     })
-    socket.on('destroy', (id) => {
+    socket.on('destroy', async (id) => {
+        const room = await getRoomNum(id)
         const id1 = id
-        const id2 = arrObject[socket.room].checkUser(id1)
-        io.sockets.in(socket.room).emit('destroyed', {user1: id1, user2: id2, msg: '/next telah digunakan..'})
-        arrObject[socket.room].destroyRoom()
-        socket.leave(socket.room)
+        const id2 = arrObject[room].checkUser(id1)
+        io.emit('destroyed', {user1: id1, user2: id2, msg: '/next telah digunakan..'})
+        arrObject[room].destroyRoom()
+        //socket.leave(socket.room)
     })
-    socket.on('send-message', (data) => {
+    socket.on('send-message', async (data) => {
+        const room = await getRoomNum(data.id)
         if(data.msg != '/next') {
-            io.sockets.in(socket.room).emit('sendMessage', {user: arrObject[socket.room].checkUser(data.id), msg: data.msg})
+            io.emit('sendMessage', {user: arrObject[room].checkUser(data.id), msg: data.msg})
         }
     })
-    socket.on('send-sticker', (data) => {
-        io.sockets.in(socket.room).emit('sendSticker', {user: arrObject[socket.room].checkUser(data.id), sticker: data.sticker})
+    socket.on('send-sticker', async (data) => {
+        const room = await getRoomNum(data.id)
+        io.emit('sendSticker', {user: arrObject[room].checkUser(data.id), sticker: data.sticker})
     })
-    socket.on('send-animation', (data) => {
-        io.sockets.in(socket.room).emit('sendAnimation', {user: arrObject[socket.room].checkUser(data.id), animation: data.animation})
+    socket.on('send-animation', async (data) => {
+        const room = await getRoomNum(data.id)
+        io.emit('sendAnimation', {user: arrObject[room].checkUser(data.id), animation: data.animation})
     })
-    socket.on('send-video', (data) => {
-        io.sockets.in(socket.room).emit('sendVideo', {user: arrObject[socket.room].checkUser(data.id), video: data.video})
+    socket.on('send-video', async (data) => {
+        const room = await getRoomNum(data.id)
+        io.emit('sendVideo', {user: arrObject[room].checkUser(data.id), video: data.video})
     })
-    socket.on('send-audio', (data) => {
-        io.sockets.in(socket.room).emit('sendAudio', {user: arrObject[socket.room].checkUser(data.id), audio: data.audio})
+    socket.on('send-audio', async (data) => {
+        const room = await getRoomNum(data.id)
+        io.emit('sendAudio', {user: arrObject[room].checkUser(data.id), audio: data.audio})
     })
-    socket.on('send-voice', (data) => {
-        io.sockets.in(socket.room).emit('sendVoice', {user: arrObject[socket.room].checkUser(data.id), voice: data.voice})
+    socket.on('send-voice', async (data) => {
+        const room = await getRoomNum(data.id)
+        io.emit('sendVoice', {user: arrObject[room].checkUser(data.id), voice: data.voice})
     })
-    socket.on('send-photo', (data) => {
-        io.sockets.in(socket.room).emit('sendPhoto', {user: arrObject[socket.room].checkUser(data.id), photo: data.photo})
+    socket.on('send-photo', async (data) => {
+        const room = await getRoomNum(data.id)
+        io.emit('sendPhoto', {user: arrObject[room].checkUser(data.id), photo: data.photo})
     })
     //DEBUG TESTS
     socket.on('test', () => {
         console.log(arrObject)
         console.log(users)
-        console.log(socket.room)
-        console.log(socket.username)
+        var dat = {
+            'id' : data.id,
+            'room' : room
+        }
+        io.emit('testing', dat)
         //console.log('searching: '+searching)
     })
 })

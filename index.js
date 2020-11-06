@@ -7,7 +7,7 @@ const bot = new telegram(token, { polling: true })
 
 //socket client connection
 const io = require("socket.io-client")
-const socket = io("http://ba3bd590df2c.ngrok.io")
+const socket = io("http://a82094eae8a0.ngrok.io")
 
 //var timeout
 const timeout = 1000
@@ -95,7 +95,7 @@ async function getCondition(chatId) {
     socket.emit('getCondition', chatId)
     const inChat = await new Promise(resolve => {
         socket.on('condition',  data => {
-            socket.removeEventListener('condition')
+            //socket.removeEventListener('condition')
             resolve(data)
         })
     })
@@ -105,7 +105,7 @@ async function checkUser(chatId) {
     socket.emit('checkUser', chatId)
     const exist = await new Promise(resolve => {
         socket.on('user', data => {
-            socket.removeEventListener('user')
+            //socket.removeEventListener('user')
             resolve(data)
         })
     })
@@ -115,7 +115,7 @@ async function getState(chatId) {
     socket.emit('checkState', chatId)
     const state = await new Promise(resolve => {
         socket.on('state', data => {
-            socket.removeEventListener('state')
+            //socket.removeEventListener('state')
             resolve(data)
         })
     })
